@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Daily Tracker</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #22263a;
+    --border: #2a2e45;
+    --border2: #363b56;
+    --text: #e8eaf0;
+    --text2: #8b90a8;
+    --text3: #555a75;
+    --accent: #4f8ef7;
+    --accent-dim: #1e3a6e;
+    --green: #3ecf8e;
+    --green-dim: #0d3d28;
+    --amber: #f5a623;
+    --amber-dim: #3d2a0a;
+    --red: #e5534b;
+    --red-dim: #3d1a18;
+    --purple: #a78bfa;
+    --purple-dim: #2e1f5e;
+    --radius: 8px;
+    --radius-lg: 12px;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+
+  /* ── Layout ── */
+  .app { max-width: 960px; margin: 0 auto; padding: 24px 16px; }
+  .hidden { display: none !important; }
+
+  /* ── Header ── */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 28px;
+  }
+  .header-left { display: flex; align-items: center; gap: 12px; }
+  .back-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text2);
+    padding: 6px 12px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-size: 13px;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .back-btn:hover { border-color: var(--border2); color: var(--text); }
+  .page-title { font-size: 18px; font-weight: 600; color: var(--text); }
+  .page-subtitle { font-size: 12px; color: var(--text3); margin-top: 2px; }
+
+  /* ── Stats row ── */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+  }
+  .stat-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+  .stat-value { font-size: 22px; font-weight: 600; }
+  .stat-value.green { color: var(--green); }
+  .stat-value.amber { color: var(--amber); }
+  .stat-value.accent { color: var(--accent); }
+  .stat-value.red { color: var(--red); }
+
+  /* ── Calendar ── */
+  .calendar-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+  }
+  .cal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .cal-nav { display: flex; align-items: center; gap: 8px; }
+  .cal-nav-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text2);
+    width: 30px; height: 30px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.15s;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .cal-nav-btn:hover { border-color: var(--border2); color: var(--text); }
+  .cal-month-label { font-size: 15px; font-weight: 600; min-width: 140px; text-align: center; }
+  .cal-today-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text2);
+    padding: 5px 12px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.15s;
+  }
+  .cal-today-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  .cal-grid { padding: 16px 20px 20px; }
+  .cal-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    margin-bottom: 8px;
+  }
+  .cal-weekday {
+    text-align: center;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 4px 0;
+  }
+  .cal-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .cal-day {
+    aspect-ratio: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius);
+    cursor: pointer;
+    position: relative;
+    border: 1px solid transparent;
+    transition: background 0.12s, border-color 0.12s;
+    gap: 3px;
+  }
+  .cal-day:hover { background: var(--surface2); border-color: var(--border); }
+  .cal-day.other-month .day-num { color: var(--text3); }
+  .cal-day.today { border-color: var(--accent); }
+  .cal-day.today .day-num { color: var(--accent); font-weight: 600; }
+  .cal-day.selected { background: var(--accent-dim); border-color: var(--accent); }
+  .cal-day.has-data .day-dots { display: flex; gap: 2px; }
+  .day-num { font-size: 13px; font-weight: 500; }
+  .day-dots { display: none; gap: 2px; }
+  .dot {
+    width: 4px; height: 4px;
+    border-radius: 50%;
+  }
+  .dot.done { background: var(--green); }
+  .dot.pending { background: var(--amber); }
+  .dot.blocked { background: var(--red); }
+
+  /* ── Legend ── */
+  .legend {
+    display: flex;
+    gap: 16px;
+    padding: 12px 20px;
+    border-top: 1px solid var(--border);
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text3); }
+  .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+  /* ── Day Log Page ── */
+  .day-header-bar {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .day-date-big { font-size: 20px; font-weight: 600; }
+  .day-date-sub { font-size: 12px; color: var(--text3); margin-top: 2px; }
+  .day-progress { display: flex; align-items: center; gap: 10px; }
+  .progress-bar-wrap { width: 120px; height: 6px; background: var(--surface2); border-radius: 3px; }
+  .progress-bar { height: 6px; border-radius: 3px; background: var(--green); transition: width 0.3s; }
+  .progress-label { font-size: 12px; color: var(--text2); min-width: 36px; text-align: right; }
+
+  /* ── Sections ── */
+  .section { margin-bottom: 20px; }
+  .section-title {
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text3);
+    margin-bottom: 10px;
+    padding-left: 2px;
+  }
+
+  /* ── Log blocks ── */
+  .log-block {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    margin-bottom: 10px;
+  }
+  .log-block-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .block-time {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text3);
+    min-width: 75px;
+  }
+  .block-label { font-size: 13px; font-weight: 500; flex: 1; }
+  .block-status-wrap { display: flex; align-items: center; gap: 8px; }
+  .status-badge {
+    font-size: 11px;
+    font-weight: 500;
+    padding: 2px 8px;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .status-badge:hover { opacity: 0.8; }
+  .status-done { background: var(--green-dim); color: var(--green); }
+  .status-pending { background: var(--amber-dim); color: var(--amber); }
+  .status-blocked { background: var(--red-dim); color: var(--red); }
+  .status-skipped { background: var(--surface2); color: var(--text3); }
+
+  .log-block-body { padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; }
+
+  .field-row { display: flex; flex-direction: column; gap: 5px; }
+  .field-label { font-size: 11px; color: var(--text3); }
+  .field-input {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-size: 13px;
+    padding: 8px 10px;
+    font-family: inherit;
+    resize: vertical;
+    min-height: 36px;
+    transition: border-color 0.15s;
+    width: 100%;
+  }
+  .field-input:focus { outline: none; border-color: var(--accent); }
+  .field-input::placeholder { color: var(--text3); }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  /* ── Morning plan ── */
+  .morning-plan {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    margin-bottom: 10px;
+  }
+  .morning-plan-header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--purple-dim);
+  }
+  .morning-plan-header .block-label { color: var(--purple); }
+  .morning-plan-body { padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; }
+
+  /* ── Save button ── */
+
+
+  /* ── Inline status cycle ── */
+  .cycle-btn {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text2);
+    font-size: 11px;
+    padding: 3px 8px;
+    cursor: pointer;
+    transition: all 0.12s;
+    font-family: inherit;
+  }
+  .cycle-btn:hover { border-color: var(--border2); color: var(--text); }
+
+  /* ── Responsive ── */
+  @media (max-width: 600px) {
+    .stats-row { grid-template-columns: repeat(2, 1fr); }
+    .two-col { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ════════════════════ CALENDAR PAGE ════════════════════ -->
+  <div id="cal-page">
+    <div class="header">
+      <div>
+        <div class="page-title">Daily Tracker</div>
+        <div class="page-subtitle">Click any date to log your day</div>
+      </div>
+      </div>
+    </div>
+
+    <div class="stats-row" id="month-stats">
+      <div class="stat-card">
+        <div class="stat-label">Days logged</div>
+        <div class="stat-value accent" id="stat-logged">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Tasks done</div>
+        <div class="stat-value green" id="stat-done">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Pending</div>
+        <div class="stat-value amber" id="stat-pending">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Blocked</div>
+        <div class="stat-value red" id="stat-blocked">0</div>
+      </div>
+    </div>
+
+    <div class="calendar-wrap">
+      <div class="cal-header">
+        <div class="cal-nav">
+          <button class="cal-nav-btn" id="prev-month">&#8592;</button>
+          <div class="cal-month-label" id="cal-month-label"></div>
+          <button class="cal-nav-btn" id="next-month">&#8594;</button>
+        </div>
+        <button class="cal-today-btn" id="today-btn">Today</button>
+      </div>
+      <div class="cal-grid">
+        <div class="cal-weekdays">
+          <div class="cal-weekday">Sun</div>
+          <div class="cal-weekday">Mon</div>
+          <div class="cal-weekday">Tue</div>
+          <div class="cal-weekday">Wed</div>
+          <div class="cal-weekday">Thu</div>
+          <div class="cal-weekday">Fri</div>
+          <div class="cal-weekday">Sat</div>
+        </div>
+        <div class="cal-days" id="cal-days"></div>
+      </div>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>Done</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--amber)"></div>Pending</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--red)"></div>Blocked</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════ DAY LOG PAGE ════════════════════ -->
+  <div id="day-page" class="hidden">
+    <div class="header">
+      <div class="header-left">
+        <button class="back-btn" id="back-btn">&#8592; Calendar</button>
+        <div>
+          <div class="page-title" id="day-page-title"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="day-header-bar">
+      <div>
+        <div class="day-date-big" id="day-date-big"></div>
+        <div class="day-date-sub" id="day-date-sub"></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:16px;">
+        <div id="autosave-indicator" style="font-size:11px;color:var(--text3);opacity:0;transition:opacity 0.4s;">saved</div>
+        <div class="day-progress">
+          <div style="font-size:12px;color:var(--text3)">Day progress</div>
+          <div class="progress-bar-wrap"><div class="progress-bar" id="progress-bar" style="width:0%"></div></div>
+          <div class="progress-label" id="progress-label">0%</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Morning plan -->
+    <div class="section">
+      <div class="section-title">Morning plan (before leaving home)</div>
+      <div class="morning-plan">
+        <div class="morning-plan-header">
+          <div class="block-label">Wake-up decisions</div>
+          <div style="font-size:11px;color:var(--purple);margin-left:auto;">Written before leaving home</div>
+        </div>
+        <div class="morning-plan-body">
+          <div class="field-row">
+            <div class="field-label">Top task — Validation AI today</div>
+            <textarea class="field-input" id="f-va-top" rows="2" placeholder="What is the single most important thing to complete for Validation AI?"></textarea>
+          </div>
+          <div class="field-row">
+            <div class="field-label">Top task — Regintel today</div>
+            <textarea class="field-input" id="f-rg-top" rows="2" placeholder="What is the single most important thing to complete for Regintel?"></textarea>
+          </div>
+          <div class="two-col">
+            <div class="field-row">
+              <div class="field-label">Deep work A — complexity?</div>
+              <select class="field-input" id="f-complexity-a">
+                <option value="">Select</option>
+                <option>Low — interruptible ok</option>
+                <option>Medium — prefer no interruptions</option>
+                <option>High — protect this block</option>
+              </select>
+            </div>
+            <div class="field-row">
+              <div class="field-label">Deep work B — complexity?</div>
+              <select class="field-input" id="f-complexity-b">
+                <option value="">Select</option>
+                <option>Low — interruptible ok</option>
+                <option>Medium — prefer no interruptions</option>
+                <option>High — protect this block</option>
+              </select>
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">Blockers or dependencies to resolve today</div>
+            <textarea class="field-input" id="f-blockers-morning" rows="2" placeholder="Anything you need from someone else? Any decision pending?"></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Work blocks -->
+    <div class="section">
+      <div class="section-title">Work blocks</div>
+
+      <!-- Settle in -->
+      <div class="log-block">
+        <div class="log-block-header">
+          <div class="block-time">9:50 – 10:00</div>
+          <div class="block-label">Settle in + review notes</div>
+          <div class="block-status-wrap">
+            <button class="status-badge status-pending" data-block="settle" onclick="cycleStatus(this,'settle')">pending</button>
+          </div>
+        </div>
+        <div class="log-block-body">
+          <div class="field-row">
+            <div class="field-label">Notes reviewed / anything carried from yesterday</div>
+            <textarea class="field-input" id="f-settle-notes" rows="2" placeholder="What did you re-read? Any overnight thoughts?"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- 10-11 deep work A -->
+      <div class="log-block">
+        <div class="log-block-header">
+          <div class="block-time">10:00 – 11:00</div>
+          <div class="block-label">Deep work — Validation AI (Block 1)</div>
+          <div class="block-status-wrap">
+            <button class="status-badge status-pending" data-block="dw-a1" onclick="cycleStatus(this,'dw-a1')">pending</button>
+          </div>
+        </div>
+        <div class="log-block-body">
+          <div class="field-row">
+            <div class="field-label">What did you work on?</div>
+            <textarea class="field-input" id="f-a1-work" rows="2" placeholder="Specific feature, bug, or task..."></textarea>
+          </div>
+          <div class="two-col">
+            <div class="field-row">
+              <div class="field-label">Progress made</div>
+              <textarea class="field-input" id="f-a1-progress" rows="2" placeholder="What moved forward?"></textarea>
+            </div>
+            <div class="field-row">
+              <div class="field-label">Interrupted by?</div>
+              <textarea class="field-input" id="f-a1-interrupt" rows="2" placeholder="Meeting, intern, support request..."></textarea>
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">Park note (where you stopped exactly)</div>
+            <textarea class="field-input" id="f-a1-park" rows="2" placeholder="Exact state when you stopped — so you can reload fast after tea break"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tea break -->
+      <div class="log-block">
+        <div class="log-block-header">
+          <div class="block-time">11:00 – 11:20</div>
+          <div class="block-label">Coffee / tea with colleagues</div>
+          <div class="block-status-wrap">
+            <button class="status-badge status-done" data-block="tea" onclick="cycleStatus(this,'tea')">done</button>
+          </div>
+        </div>
+        <div class="log-block-body">
+          <div class="field-row">
+            <div class="field-label">Any useful context picked up (project news, blockers, decisions)</div>
+            <textarea class="field-input" id="f-tea-notes" rows="2" placeholder="Optional — anything relevant from the conversation?"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- 11:20-1 deep work A continued -->
+      <div class="log-block">
+        <div class="log-block-header">
+          <div class="block-time">11:20 – 1:00</div>
+          <div class="block-label">Deep work — Validation AI (Block 2)</div>
+          <div class="block-status-wrap">
+            <button class="status-badge status-pending" data-block="dw-a2" onclick="cycleStatus(this,'dw-a2')">pending</button>
+          </div>
+        </div>
+        <div class="log-block-body">
+          <div class="field-row">
+            <div class="field-label">What did you work on?</div>
+            <textarea class="field-input" id="f-a2-work" rows="2" placeholder="Continuation of block 1 or new task?"></textarea>
+          </div>
+          <div class="two-col">
+            <div class="field-row">
+              <div class="field-label">What was completed?</div>
+              <textarea class="field-input" id="f-a2-done" rows="2" placeholder="Specific deliverable or milestone reached..."></textarea>
+            </div>
+            <div class="field-row">
+              <div class="field-label">What remains / next step?</div>
+              <textarea class="field-input" id="f-a2-next" rows="2" placeholder="What would you pick up tomorrow?"></textarea>
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">Intern guidance given (if any)</div>
+            <textarea class="field-input" id="f-a2-intern" rows="2" placeholder="Which intern, what question, what direction you gave..."></textarea>
+          </div>
+          <div class="field-row">
+            <div class="field-label">Park note before lunch</div>
+            <textarea class="field-input" id="f-a2-park" rows="2" placeholder="Exact state — what were you about to do next?"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- Lunch -->
+      <div class="log-block">
+        <div class="log-block-header">
+          <div class="block-time">1:00 – 1:45</div>
+          <div class="block-label">Lunch break</div>
+          <div class="block-status-wrap">
+            <button class="status-badge status-done" data-block="lunch" onclick="cycleStatus(this,'lunch')">done</button>
+          </div>
+        </div>
+        <div class="log-block-body">
+          <div class="field-row">
+            <div class="field-label">Away from screen? (good for context switch)</div>
+            <select class="field-input" id="f-lunch-away">
+              <option value="">Select</option>
+              <option>Yes — full break</option>
+              <option>Partial — stepped away briefly</option>
+              <option>No — stayed at desk</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Context switch -->
+      <div class="log-block">
+        <div class="log-block-header">
+          <div class="block-time">1:45 – 2:00</div>
+          <div class="block-label">Context switch ritual — load Regintel</div>
+          <div class="block-status-wrap">
+            <button class="status-badge status-pending" data-block="switch" onclick="cycleStatus(this,'switch')">pending</button>
+          </div>
+        </div>
+        <div class="log-block-body">
+          <div class="field-row">
+            <div class="field-label">One sentence: I am about to work on X because Y</div>
+            <textarea class="field-input" id="f-switch-sentence" rows="2" placeholder="Write your context-loading sentence here before starting Regintel..."></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2-3:30 deep work B -->
+      <div class="log-block">
+        <div class="log-block-header">
+          <div class="block-time">2:00 – 3:30</div>
+          <div class="block-label">Deep work — Regintel</div>
+          <div class="block-status-wrap">
+            <button class="status-badge status-pending" data-block="dw-b" onclick="cycleStatus(this,'dw-b')">pending</button>
+          </div>
+        </div>
+        <div class="log-block-body">
+          <div class="field-row">
+            <div class="field-label">What did you work on?</div>
+            <textarea class="field-input" id="f-b-work" rows="2" placeholder="Specific feature, bug, or task for Regintel..."></textarea>
+          </div>
+          <div class="two-col">
+            <div class="field-row">
+              <div class="field-label">What was completed?</div>
+              <textarea class="field-input" id="f-b-done" rows="2" placeholder="Deliverable or milestone..."></textarea>
+            </div>
+            <div class="field-row">
+              <div class="field-label">Interrupted by?</div>
+              <textarea class="field-input" id="f-b-interrupt" rows="2" placeholder="Unexpected meeting, switch request..."></textarea>
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">Park note</div>
+            <textarea class="field-input" id="f-b-park" rows="2" placeholder="Exact state when this block ended..."></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- Intern window -->
+      <div class="log-block">
+        <div class="log-block-header">
+          <div class="block-time">3:30 – 4:00</div>
+          <div class="block-label">Intern check-in</div>
+          <div class="block-status-wrap">
+            <button class="status-badge status-pending" data-block="intern" onclick="cycleStatus(this,'intern')">pending</button>
+          </div>
+        </div>
+        <div class="log-block-body">
+          <div class="field-row">
+            <div class="field-label">Intern 1 — question and direction given</div>
+            <textarea class="field-input" id="f-intern1" rows="2" placeholder="What were they stuck on? What direction did you give?"></textarea>
+          </div>
+          <div class="field-row">
+            <div class="field-label">Intern 2 — question and direction given</div>
+            <textarea class="field-input" id="f-intern2" rows="2" placeholder="What were they stuck on? What direction did you give?"></textarea>
+          </div>
+          <div class="field-row">
+            <div class="field-label">Intern 3 — question and direction given</div>
+            <textarea class="field-input" id="f-intern3" rows="2" placeholder="What were they stuck on? What direction did you give?"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4-5:30 continuation -->
+      <div class="log-block">
+        <div class="log-block-header">
+          <div class="block-time">4:00 – 5:30</div>
+          <div class="block-label">Execution / continuation block</div>
+          <div class="block-status-wrap">
+            <button class="status-badge status-pending" data-block="exec" onclick="cycleStatus(this,'exec')">pending</button>
+          </div>
+        </div>
+        <div class="log-block-body">
+          <div class="field-row">
+            <div class="field-label">Which project? What task?</div>
+            <textarea class="field-input" id="f-exec-task" rows="2" placeholder="Spill-over from A or B, or a lighter task..."></textarea>
+          </div>
+          <div class="field-row">
+            <div class="field-label">Outcome</div>
+            <textarea class="field-input" id="f-exec-outcome" rows="2" placeholder="What was the result?"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5:30-6:30 lighter -->
+      <div class="log-block">
+        <div class="log-block-header">
+          <div class="block-time">5:30 – 6:30</div>
+          <div class="block-label">Reviews, docs, communication</div>
+          <div class="block-status-wrap">
+            <button class="status-badge status-pending" data-block="light" onclick="cycleStatus(this,'light')">pending</button>
+          </div>
+        </div>
+        <div class="log-block-body">
+          <div class="field-row">
+            <div class="field-label">What was reviewed / communicated?</div>
+            <textarea class="field-input" id="f-light-work" rows="2" placeholder="Code reviews, docs, messages, living doc updates..."></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- End of day shutdown -->
+    <div class="section">
+      <div class="section-title">End of day shutdown (6:30 – 7:00)</div>
+
+      <div class="log-block">
+        <div class="log-block-header">
+          <div class="block-label">Day review + tomorrow's plan</div>
+          <div class="block-status-wrap">
+            <button class="status-badge status-pending" data-block="shutdown" onclick="cycleStatus(this,'shutdown')">pending</button>
+          </div>
+        </div>
+        <div class="log-block-body">
+          <div class="field-row">
+            <div class="field-label">Validation AI — what was completed today?</div>
+            <textarea class="field-input" id="f-eod-va-done" rows="2" placeholder="Specific deliverables completed..."></textarea>
+          </div>
+          <div class="field-row">
+            <div class="field-label">Regintel — what was completed today?</div>
+            <textarea class="field-input" id="f-eod-rg-done" rows="2" placeholder="Specific deliverables completed..."></textarea>
+          </div>
+          <div class="two-col">
+            <div class="field-row">
+              <div class="field-label">What is blocked / pending?</div>
+              <textarea class="field-input" id="f-eod-blocked" rows="3" placeholder="What couldn't move today and why?"></textarea>
+            </div>
+            <div class="field-row">
+              <div class="field-label">Overtime today?</div>
+              <select class="field-input" id="f-overtime">
+                <option value="">Select</option>
+                <option>No — finished on time</option>
+                <option>Yes — high complexity task</option>
+                <option>Yes — poor estimation</option>
+                <option>Yes — too many interruptions</option>
+              </select>
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">Top 3 tasks for tomorrow (both projects)</div>
+            <textarea class="field-input" id="f-tomorrow" rows="3" placeholder="1. [VA] ...&#10;2. [RG] ...&#10;3. [VA/RG] ..."></textarea>
+          </div>
+          <div class="field-row">
+            <div class="field-label">Final park note — where you stopped across both projects</div>
+            <textarea class="field-input" id="f-final-park" rows="3" placeholder="Exact state of both projects. This is what you'll read tomorrow morning before leaving home."></textarea>
+          </div>
+          <div class="field-row">
+            <div class="field-label">One thing that could have gone better today</div>
+            <textarea class="field-input" id="f-reflect" rows="2" placeholder="Honest weekly self-improvement note..."></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="padding: 20px 0 8px; display:flex; align-items:center; gap:8px;">
+      <div id="saved-msg" style="font-size:12px;color:var(--text3);opacity:0;transition:opacity 0.4s;">All changes saved</div>
+    </div>
+  </div>
+
+
+<script>
+  const FIELDS = [
+    'va-top','rg-top','complexity-a','complexity-b','blockers-morning',
+    'settle-notes',
+    'a1-work','a1-progress','a1-interrupt','a1-park',
+    'tea-notes',
+    'a2-work','a2-done','a2-next','a2-intern','a2-park',
+    'lunch-away',
+    'switch-sentence',
+    'b-work','b-done','b-interrupt','b-park',
+    'intern1','intern2','intern3',
+    'exec-task','exec-outcome',
+    'light-work',
+    'eod-va-done','eod-rg-done','eod-blocked','overtime','tomorrow','final-park','reflect'
+  ];
+
+  const STATUS_BLOCKS = [
+    'settle','dw-a1','tea','dw-a2','lunch','switch','dw-b','intern','exec','light','shutdown'
+  ];
+
+  const STATUS_CYCLE = ['pending','done','blocked','skipped'];
+  const STATUS_CLASSES = {
+    pending: 'status-pending',
+    done: 'status-done',
+    blocked: 'status-blocked',
+    skipped: 'status-skipped'
+  };
+
+  let currentDate = null;
+  let viewYear, viewMonth;
+
+  function today() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  }
+
+  function storageKey(dateStr) { return `tracker_${dateStr}`; }
+
+  function loadDayData(dateStr) {
+    try { return JSON.parse(localStorage.getItem(storageKey(dateStr)) || '{}'); } catch(e) { return {}; }
+  }
+
+  function saveDayData(dateStr, data) {
+    localStorage.setItem(storageKey(dateStr), JSON.stringify(data));
+  }
+
+  function cycleStatus(btn, block) {
+    const cur = btn.textContent.trim();
+    const idx = STATUS_CYCLE.indexOf(cur);
+    const next = STATUS_CYCLE[(idx + 1) % STATUS_CYCLE.length];
+    btn.textContent = next;
+    btn.className = 'status-badge ' + STATUS_CLASSES[next];
+    updateProgress();
+    autoSave();
+  }
+
+  function updateProgress() {
+    const btns = document.querySelectorAll('[data-block]');
+    let done = 0, total = 0;
+    btns.forEach(b => {
+      total++;
+      if (b.textContent.trim() === 'done') done++;
+    });
+    const pct = total ? Math.round((done / total) * 100) : 0;
+    document.getElementById('progress-bar').style.width = pct + '%';
+    document.getElementById('progress-label').textContent = pct + '%';
+  }
+
+  let autoSaveTimer = null;
+
+  function autoSave() {
+    if (!currentDate) return;
+    const data = {};
+    FIELDS.forEach(f => {
+      const el = document.getElementById('f-' + f);
+      if (el) data[f] = el.value;
+    });
+    STATUS_BLOCKS.forEach(b => {
+      const btn = document.querySelector(`[data-block="${b}"]`);
+      if (btn) data['status_' + b] = btn.textContent.trim();
+    });
+    saveDayData(currentDate, data);
+    showSavedIndicator();
+    renderCalendar();
+    updateMonthStats();
+  }
+
+  function showSavedIndicator() {
+    const ind = document.getElementById('autosave-indicator');
+    if (ind) { ind.style.opacity = '1'; setTimeout(() => { ind.style.opacity = '0'; }, 1500); }
+  }
+
+  function debouncedSave() {
+    clearTimeout(autoSaveTimer);
+    autoSaveTimer = setTimeout(autoSave, 600);
+  }
+
+  function saveDay() { autoSave(); }
+
+  function wireAutoSave() {
+    document.querySelectorAll('.field-input').forEach(el => {
+      el.addEventListener('input', debouncedSave);
+      el.addEventListener('change', debouncedSave);
+    });
+  }
+
+  function openDay(dateStr) {
+    currentDate = dateStr;
+    const d = new Date(dateStr + 'T00:00:00');
+    const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+    document.getElementById('day-page-title').textContent = d.toLocaleDateString('en-IN', {day:'numeric', month:'long', year:'numeric'});
+    document.getElementById('day-date-big').textContent = `${dayNames[d.getDay()]}, ${d.getDate()} ${monthNames[d.getMonth()]} ${d.getFullYear()}`;
+    document.getElementById('day-date-sub').textContent = dateStr === today() ? 'Today' : '';
+
+    const data = loadDayData(dateStr);
+    FIELDS.forEach(f => {
+      const el = document.getElementById('f-' + f);
+      if (el) el.value = data[f] || '';
+    });
+    STATUS_BLOCKS.forEach(b => {
+      const btn = document.querySelector(`[data-block="${b}"]`);
+      if (btn) {
+        const saved = data['status_' + b] || (b === 'tea' || b === 'lunch' ? 'done' : 'pending');
+        btn.textContent = saved;
+        btn.className = 'status-badge ' + STATUS_CLASSES[saved];
+      }
+    });
+
+    updateProgress();
+    document.getElementById('cal-page').classList.add('hidden');
+    document.getElementById('day-page').classList.remove('hidden');
+    window.scrollTo(0, 0);
+    wireAutoSave();
+  }
+
+  function renderCalendar() {
+    const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    document.getElementById('cal-month-label').textContent = `${monthNames[viewMonth]} ${viewYear}`;
+
+    const firstDay = new Date(viewYear, viewMonth, 1).getDay();
+    const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+    const daysInPrev = new Date(viewYear, viewMonth, 0).getDate();
+    const todayStr = today();
+
+    const container = document.getElementById('cal-days');
+    container.innerHTML = '';
+
+    const totalCells = Math.ceil((firstDay + daysInMonth) / 7) * 7;
+
+    for (let i = 0; i < totalCells; i++) {
+      let date, isOther = false;
+      if (i < firstDay) {
+        date = new Date(viewYear, viewMonth - 1, daysInPrev - firstDay + i + 1);
+        isOther = true;
+      } else if (i >= firstDay + daysInMonth) {
+        date = new Date(viewYear, viewMonth + 1, i - firstDay - daysInMonth + 1);
+        isOther = true;
+      } else {
+        date = new Date(viewYear, viewMonth, i - firstDay + 1);
+      }
+
+      const dateStr = `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+      const data = loadDayData(dateStr);
+      const hasData = Object.keys(data).length > 0;
+
+      let doneCount = 0, pendingCount = 0, blockedCount = 0;
+      STATUS_BLOCKS.forEach(b => {
+        const s = data['status_' + b];
+        if (s === 'done') doneCount++;
+        else if (s === 'blocked') blockedCount++;
+        else if (s === 'pending' && hasData) pendingCount++;
+      });
+
+      const el = document.createElement('div');
+      el.className = 'cal-day' + (isOther ? ' other-month' : '') + (dateStr === todayStr ? ' today' : '') + (hasData ? ' has-data' : '');
+      el.innerHTML = `<span class="day-num">${date.getDate()}</span><div class="day-dots">${doneCount > 0 ? `<div class="dot done"></div>` : ''}${pendingCount > 0 ? `<div class="dot pending"></div>` : ''}${blockedCount > 0 ? `<div class="dot blocked"></div>` : ''}</div>`;
+      el.addEventListener('click', () => openDay(dateStr));
+      container.appendChild(el);
+    }
+  }
+
+  function updateMonthStats() {
+    let logged = 0, done = 0, pending = 0, blocked = 0;
+    const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateStr = `${viewYear}-${String(viewMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      const data = loadDayData(dateStr);
+      if (Object.keys(data).length > 0) {
+        logged++;
+        STATUS_BLOCKS.forEach(b => {
+          const s = data['status_' + b];
+          if (s === 'done') done++;
+          else if (s === 'pending') pending++;
+          else if (s === 'blocked') blocked++;
+        });
+      }
+    }
+    document.getElementById('stat-logged').textContent = logged;
+    document.getElementById('stat-done').textContent = done;
+    document.getElementById('stat-pending').textContent = pending;
+    document.getElementById('stat-blocked').textContent = blocked;
+  }
+
+  document.getElementById('prev-month').addEventListener('click', () => {
+    viewMonth--;
+    if (viewMonth < 0) { viewMonth = 11; viewYear--; }
+    renderCalendar();
+    updateMonthStats();
+  });
+
+  document.getElementById('next-month').addEventListener('click', () => {
+    viewMonth++;
+    if (viewMonth > 11) { viewMonth = 0; viewYear++; }
+    renderCalendar();
+    updateMonthStats();
+  });
+
+  document.getElementById('today-btn').addEventListener('click', () => {
+    const d = new Date();
+    viewYear = d.getFullYear();
+    viewMonth = d.getMonth();
+    renderCalendar();
+    updateMonthStats();
+  });
+
+  document.getElementById('back-btn').addEventListener('click', () => {
+    document.getElementById('day-page').classList.add('hidden');
+    document.getElementById('cal-page').classList.remove('hidden');
+    renderCalendar();
+    updateMonthStats();
+    window.scrollTo(0,0);
+  });
+
+  const d = new Date();
+  viewYear = d.getFullYear();
+  viewMonth = d.getMonth();
+  renderCalendar();
+  updateMonthStats();
+</script>
+</body>
+</html>
